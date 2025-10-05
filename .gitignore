@@ -1,0 +1,31 @@
+# Compiled binaries
+exercise1
+exercise2
+exercise3
+*.o
+*.out
+
+# Results
+results/*.txt
+results/*.png
+results/*.csv
+
+# Keep directory structure
+!results/.gitkeep
+!exercises/.gitkeep
+!scripts/.gitkeep
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Claude Code files
+CLAUDE.md
+.claude/

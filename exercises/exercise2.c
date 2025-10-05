@@ -116,14 +116,14 @@ int main(void) {
         .thread_id = 1,
         .policy_name = "SCHED_FIFO",
         .policy = SCHED_FIFO,
-        .priority = 80
+        .priority = 98
     };
 
     threads[2] = (thread_info_t){
         .thread_id = 2,
         .policy_name = "SCHED_RR",
         .policy = SCHED_RR,
-        .priority = 80
+        .priority = 98
     };
 
     printf("Starting threads...\n\n");

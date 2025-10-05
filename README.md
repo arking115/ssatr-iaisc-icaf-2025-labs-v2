@@ -18,6 +18,18 @@ make all
 ./exercise1
 ```
 
+If container is already running, attach with exec:
+```bash
+# 1. Find container name/ID
+  docker ps
+
+# 2. Connect to it
+  docker exec -it <container_name_or_id> /bin/bash
+
+# 3. Start interactive session with full privileges (needed for RT scheduling):
+  docker-compose run --rm --privileged rt-lab
+```
+
 ## Project Structure
 
 ```

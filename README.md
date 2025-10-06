@@ -95,7 +95,6 @@ make stress-test  # Test under system load
 - Exercise 0E: Scheduling introduction (`sched_setscheduler`)
 - Exercise 0F: Statistics and array manipulation
 
-**Duration:** ~90 minutes
 **Guide:** `rt_week0_guide.md`
 
 ---
@@ -152,16 +151,10 @@ The `docs/` folder contains supplementary materials:
 - **`exercise8_aba_diagrams.md`** - ABA problem illustrations
 - **`exercise8_design_rationale.md`** - Design decisions for lock-free exercises
 
-To view documentation:
-```bash
-cat docs/rt_concepts_reference.md
-# or use any markdown viewer
-```
-
 ## Requirements
 
 - Docker and Docker Compose
-- Host system with sufficient privileges for RT scheduling (container runs with `--privileged`)
+- Host system with sufficient privileges for RT scheduling (container runs with `--privileged`). While this will be possible difficult to achieve the focus should be in understand programming concepts related to RT programming, even if during tests and evaluation effective RT behavior will not be observed.
 - For visualization: Python 3 with matplotlib (included in Docker image)
 
 ## Notes

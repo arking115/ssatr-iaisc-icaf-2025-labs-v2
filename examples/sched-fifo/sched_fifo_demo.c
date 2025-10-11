@@ -58,6 +58,7 @@ typedef struct {
 thread_info_t threads[NUM_THREADS];
 int next_execution_order = 1;
 pthread_mutex_t order_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_barrier_t start_barrier;  // Barrier to synchronize thread start
 
 // Calculate time difference in nanoseconds
 long timespec_diff_ns(struct timespec *start, struct timespec *end) {
@@ -78,19 +79,11 @@ void do_work(void) {
 void* thread_function(void *arg) {
     thread_info_t *info = (thread_info_t *)arg;
 
-    // Set scheduling policy and priority
-    struct sched_param param;
-    param.sched_priority = info->priority;
+    // Wait at barrier until all threads are created and have RT priority set
+    // This ensures all threads start their work AFTER scheduling policy is configured
+    pthread_barrier_wait(&start_barrier);
 
-    if (sched_setscheduler(0, info->policy, &param) != 0) {
-        if (info->policy != SCHED_OTHER) {
-            fprintf(stderr, "Warning: Thread %d (%s) - Could not set %s policy: %s\n",
-                   info->id, info->name, info->policy_name, strerror(errno));
-            fprintf(stderr, "         Continuing with SCHED_OTHER. Run with --privileged for RT.\n");
-        }
-    }
-
-    // Record start time
+    // Record start time (after barrier, when thread actually begins work)
     clock_gettime(CLOCK_MONOTONIC, &info->start_time);
 
     // Record execution order (first time thread actually runs)
@@ -178,37 +171,65 @@ void display_results(struct timespec *program_start) {
         }
     }
 
+    // Check for concurrent execution (durations should be sequential, not overlapping)
+    long total_individual = 0;
+    for (int i = 0; i < NUM_THREADS; i++) {
+        total_individual += threads[i].duration_ns;
+    }
+    long total_elapsed = timespec_diff_ns(&sorted[0].first_run_time, &sorted[NUM_THREADS-1].end_time);
+    double overlap_ratio = (double)total_elapsed / total_individual;
+
     if (correct_order && strcmp(sorted[0].policy_name, "SCHED_FIFO") == 0) {
         printf("✓ SCHED_FIFO Behavior Confirmed:\n");
-        printf("  • Threads executed in strict priority order\n");
-        printf("  • High priority (90) → Medium priority (70) → Low priority (50)\n");
-        printf("  • Each thread ran to completion without preemption\n");
-        printf("  • No time slicing - deterministic execution\n");
+        printf("  • Threads executed in strict priority order (High → Medium → Low)\n");
+        printf("  • Highest priority: %s (priority %d) ran first\n",
+               sorted[0].name, sorted[0].priority);
+
+        if (overlap_ratio > 0.95) {
+            printf("  • Sequential execution detected (overlap ratio: %.2f)\n", overlap_ratio);
+            printf("  • Each thread ran to completion without preemption\n");
+            printf("  • No time slicing - deterministic execution ✓\n");
+        } else {
+            printf("  • ⚠ Concurrent execution detected (overlap ratio: %.2f)\n", overlap_ratio);
+            printf("  • Threads may have been time-sliced (unexpected for SCHED_FIFO)\n");
+            printf("  • Possible causes: multi-core system, or RT policy not properly set\n");
+        }
     } else if (strcmp(threads[0].policy_name, "SCHED_OTHER") == 0) {
         printf("⚠ Running with SCHED_OTHER (normal scheduling):\n");
         printf("  • Execution order may not follow priority\n");
         printf("  • CFS scheduler decides based on fairness, not RT priority\n");
-        printf("  • Threads may be interleaved (time-sliced)\n");
+        printf("  • Threads were time-sliced (overlap ratio: %.2f)\n", overlap_ratio);
         printf("  • Run with --privileged to see SCHED_FIFO behavior\n");
     } else {
         printf("⚠ Unexpected execution order:\n");
-        printf("  • May indicate scheduling anomaly or system load\n");
-        printf("  • RT scheduling requires low system load for deterministic behavior\n");
+        printf("  • Threads did NOT execute in priority order\n");
+        printf("  • Expected: High (90) → Medium (70) → Low (50)\n");
+        printf("  • Actual: %s (%d) → %s (%d) → %s (%d)\n",
+               sorted[0].name, sorted[0].priority,
+               sorted[1].name, sorted[1].priority,
+               sorted[2].name, sorted[2].priority);
+        printf("  • Possible causes:\n");
+        printf("    - RT privileges not granted (need --privileged)\n");
+        printf("    - High system load interfering with scheduling\n");
+        printf("    - Multi-core CPU with parallel execution\n");
     }
 
     // Calculate time between thread starts (shows preemption)
     printf("\n=== Preemption Analysis ===\n\n");
     if (sorted[0].policy == SCHED_FIFO) {
-        printf("Time gaps between thread starts:\n");
+        printf("Time between thread completions:\n");
         for (int i = 1; i < NUM_THREADS; i++) {
-            long gap = timespec_diff_ns(&sorted[i-1].first_run_time, &sorted[i].first_run_time);
-            printf("  %s → %s: %.3f ms\n",
+            // Time from when previous thread finished to when next thread started
+            long gap = timespec_diff_ns(&sorted[i-1].end_time, &sorted[i].first_run_time);
+            printf("  %s finish → %s start: %.3f ms\n",
                    sorted[i-1].name, sorted[i].name, gap / 1000000.0);
         }
-        printf("\nWith SCHED_FIFO:\n");
-        printf("  • Small gaps indicate immediate context switch after completion\n");
-        printf("  • Next highest priority thread runs immediately\n");
-        printf("  • No waiting for scheduler time slice\n");
+        printf("\nWith proper SCHED_FIFO:\n");
+        printf("  • Negative or near-zero gaps = threads ran concurrently (multi-core)\n");
+        printf("  • Large positive gaps (~completion time) = sequential execution (single-core)\n");
+        printf("  • Context switch time is typically < 1ms\n");
+        printf("\nNote: On multi-core systems, lower priority threads may run on other cores.\n");
+        printf("      To force single-core behavior, use CPU affinity (pthread_setaffinity_np).\n");
     } else {
         printf("Running under normal scheduling - preemption analysis not applicable\n");
     }
@@ -279,7 +300,13 @@ int main(int argc, char *argv[]) {
 
     printf("\n=== Starting Execution ===\n");
     printf("\nCreating threads in order: Low → Medium → High\n");
-    printf("(Order of creation doesn't matter with SCHED_FIFO priority)\n\n");
+    printf("(With proper RT setup, priority determines execution, not creation order)\n\n");
+
+    // Initialize barrier (NUM_THREADS + 1 for main thread)
+    if (pthread_barrier_init(&start_barrier, NULL, NUM_THREADS + 1) != 0) {
+        perror("pthread_barrier_init");
+        return 1;
+    }
 
     clock_gettime(CLOCK_MONOTONIC, &program_start);
 
@@ -288,16 +315,40 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < NUM_THREADS; i++) {
         if (pthread_create(&thread_handles[i], NULL, thread_function, &threads[i]) != 0) {
             perror("pthread_create");
+            pthread_barrier_destroy(&start_barrier);
             return 1;
         }
-        // Small delay to ensure threads are created in order
-        usleep(1000);
+
+        // Set RT scheduling policy BEFORE thread starts work (via barrier)
+        if (use_rt) {
+            struct sched_param param;
+            param.sched_priority = threads[i].priority;
+
+            if (pthread_setschedparam(thread_handles[i], SCHED_FIFO, &param) != 0) {
+                fprintf(stderr, "Warning: Could not set RT priority for thread %d (%s): %s\n",
+                       threads[i].id, threads[i].name, strerror(errno));
+                fprintf(stderr, "         Run with --privileged for proper RT scheduling.\n");
+                // Continue anyway - will fall back to SCHED_OTHER
+            } else {
+                printf("✓ Thread %d (%s) configured with SCHED_FIFO priority %d\n",
+                       threads[i].id, threads[i].name, threads[i].priority);
+            }
+        }
     }
+
+    printf("\n✓ All threads created and RT priorities configured\n");
+    printf("Releasing barrier to start execution...\n\n");
+
+    // Release barrier - all threads will start executing based on priority
+    pthread_barrier_wait(&start_barrier);
 
     // Wait for all threads to complete
     for (int i = 0; i < NUM_THREADS; i++) {
         pthread_join(thread_handles[i], NULL);
     }
+
+    // Clean up barrier
+    pthread_barrier_destroy(&start_barrier);
 
     // Display results
     display_results(&program_start);

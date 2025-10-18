@@ -2,11 +2,7 @@
 
 ## Overview
 
-Before diving into real-time system programming (Exercises 1-9), students need to be comfortable with specific C programming concepts and POSIX APIs. This Week 0 series provides **six focused introductory exercises** that build the foundational skills used throughout the RT labs.
-
-**Target Audience:** Students familiar with C programming basics who need preparation for RT-specific APIs and patterns.
-
-**Total Time:** ~90 minutes
+This Week 0 series provides **six focused introductory exercises** that build the foundational skills used throughout the RT labs.
 
 ---
 
@@ -354,22 +350,3 @@ make clean             # Remove compiled binaries
 - [clock_gettime(2)](https://man7.org/linux/man-pages/man2/clock_gettime.2.html)
 - [Real-Time Linux](https://wiki.linuxfoundation.org/realtime/start)
 
----
-
-## Questions & Troubleshooting
-
-**Q: Exercise 0E fails with "Operation not permitted"?**
-A: RT scheduling requires elevated privileges. Run with `sudo` or in privileged Docker container.
-
-**Q: Timing measurements show high jitter?**
-A: Expected in Docker/virtualized environments. Focus on relative differences (RT vs normal).
-
-**Q: Can't create results directory?**
-A: Run `mkdir -p results` or let Exercise 0C create it automatically.
-
-**Q: Compilation errors with pthread functions?**
-A: Ensure `-pthread` flag is used: `gcc -pthread -lrt file.c -o output`
-
----
-
-**Ready to start?** Run `make run-week0` and follow the exercises in order!

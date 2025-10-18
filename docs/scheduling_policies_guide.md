@@ -901,18 +901,4 @@ man 1 chrt           # Command-line scheduling tool
 
 ---
 
-## Exercise Reference
-
-| Exercise | Policy Used        | Purpose                              |
-|----------|--------------------|--------------------------------------|
-| 0e       | Demonstration      | Introduce all policies               |
-| 1        | SCHED_OTHER        | Measure baseline latency             |
-| 2        | ALL                | Compare SCHED_OTHER/FIFO/RR          |
-| 3        | SCHED_FIFO         | Periodic task with deadline checking |
-| 4        | SCHED_FIFO         | Demonstrate priority inversion       |
-| 5        | SCHED_FIFO + PI    | Solve priority inversion with PI     |
-
----
-
-**Generated for:** SSATR/IAISC/ICAF 2025 Real-Time Systems Lab
-**Last Updated:** 2025-10-05
+d

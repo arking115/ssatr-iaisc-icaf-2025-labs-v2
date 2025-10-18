@@ -1,7 +1,5 @@
 # Real-Time Systems Laboratory
 
-SSATR/IAISC/ICAF 2025 - Practical exercises for learning real-time systems concepts.
-
 ## Quick Start
 
 ```bash
@@ -42,7 +40,7 @@ docker exec -it <container_name_or_id> /bin/bash
 │   └── exercise8-9.c     # Week 4: Lock-free programming
 ├── scripts/               # Python visualization scripts
 ├── results/               # Output data and graphs
-├── docs/                  # Additional documentation (see below)
+├── docs/                  # Additional documentation 
 ├── rt_week0_guide.md      # Week 0: C foundations
 ├── rt_week1_guide.md      # Week 1: RT basics
 ├── rt_week2_guide.md      # Week 2: Synchronization
@@ -140,17 +138,6 @@ make stress-test  # Test under system load
 
 ---
 
-## Additional Documentation
-
-The `docs/` folder contains supplementary materials:
-
-- **`rt_concepts_reference.md`** - Quick reference for RT terminology and formulas
-- **`scheduling_policies_guide.md`** - Deep dive into Linux scheduling policies
-- **`test_setup.md`** - Testing environment configuration and troubleshooting
-- **`exercise8_diagrams.md`** - Visual diagrams for lock-free stack operations
-- **`exercise8_aba_diagrams.md`** - ABA problem illustrations
-- **`exercise8_design_rationale.md`** - Design decisions for lock-free exercises
-
 ## Requirements
 
 - Docker and Docker Compose
@@ -186,26 +173,4 @@ ps -eo pid,class,rtprio,cmd | grep exercise
 # Monitor system performance
 htop
 ```
-
-## Troubleshooting
-
-**"Operation not permitted" for RT priority?**
-→ Run container with `--privileged` flag or use `sudo` for native Linux
-
-**High jitter values?**
-→ Expected in Docker/virtualized environments; focus on relative comparisons
-
-**Missing matplotlib for plotting?**
-→ Inside container: `pip3 install matplotlib`
-
-**Compilation errors?**
-→ Ensure you're linking with `-pthread -lrt` flags (handled by Makefile)
-
-## Resources
-
-- Lab guides: `rt_week*_guide.md` (detailed week-by-week instructions)
-- Additional docs: `docs/*.md` (reference materials and diagrams)
-- POSIX Threads: `man 7 pthreads`
-- Linux Scheduling: `man 7 sched`
-- Real-Time Linux: https://wiki.linuxfoundation.org/realtime/start
 

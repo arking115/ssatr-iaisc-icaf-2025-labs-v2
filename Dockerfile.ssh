@@ -1,0 +1,62 @@
+# Real-Time Systems Lab - Week 1
+# Docker environment with RT tools and libraries
+
+FROM ubuntu:22.04
+
+# Prevent interactive prompts during build
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install essential RT development tools
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    make \
+    cmake \
+    gdb \
+    # RT-specific tools
+    rt-tests \
+    stress-ng \
+    # Timing and tracing tools
+    linux-tools-generic \
+    trace-cmd \
+    # Python for visualization
+    python3 \
+    python3-pip \
+    python3-matplotlib \
+    python3-numpy \
+    # Utilities
+    htop \
+    procps \
+    vim \
+    nano \
+    # --- ADDED FOR ORCHESTRATOR ---
+    openssh-server \
+    # ------------------------------
+    && rm -rf /var/lib/apt/lists/*
+
+# --- ADDED FOR ORCHESTRATOR ---
+RUN mkdir /var/run/sshd
+RUN sed -i 's/#PermitEmptyPasswords no/PermitEmptyPasswords yes/' /etc/ssh/sshd_config
+RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+# Creates the student user (UID 1002) for your volume permissions
+RUN useradd -rm -d /home/student -s /bin/bash -u 1002 -p "" student \
+    && passwd -d student
+# ------------------------------
+
+# Set working directory
+# --- CHANGED TO MATCH YOUR JAVA GLOBAL VARIABLE ---
+WORKDIR /home/student
+
+# Copy project files
+COPY . /home/student/
+
+# --- ADDED FOR ORCHESTRATOR ---
+# Gives the student ownership of the copied files so they can edit them
+RUN chown -R student:root /home/student/
+# ------------------------------
+
+# Set default command
+# --- CHANGED FOR ORCHESTRATOR ---
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D"]

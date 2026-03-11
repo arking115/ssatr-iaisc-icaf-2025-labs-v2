@@ -39,24 +39,31 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir /var/run/sshd
 RUN sed -i 's/#PermitEmptyPasswords no/PermitEmptyPasswords yes/' /etc/ssh/sshd_config
 RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
-# Creates the student user (UID 1002) for your volume permissions
+# Creates the student user (UID 1002) for volume permissions
 RUN useradd -rm -d /home/student -s /bin/bash -u 1002 -p "" student \
     && passwd -d student
 # ------------------------------
 
 # Set working directory
-# --- CHANGED TO MATCH YOUR JAVA GLOBAL VARIABLE ---
 WORKDIR /home/student
 
-# Copy project files
-COPY . /home/student/
+# --- MODIFIED FOR VOLUME PERSISTENCE ---
+# 1. Put the lab files in a safe template folder (not the student folder directly)
+RUN mkdir -p /opt/lab-template
+COPY . /opt/lab-template/
 
-# --- ADDED FOR ORCHESTRATOR ---
-# Gives the student ownership of the copied files so they can edit them
-RUN chown -R student:root /home/student/
-# ------------------------------
+# 2. Create a startup script to copy files to the host volume if it's empty
+RUN echo '#!/bin/bash\n\
+if [ -z "$(ls -A /home/student)" ]; then\n\
+    cp -r /opt/lab-template/* /home/student/\n\
+    chown -R student:root /home/student/\n\
+fi\n\
+exec /usr/sbin/sshd -D' > /usr/local/bin/entrypoint.sh
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
+# ---------------------------------------
 
 # Set default command
 # --- CHANGED FOR ORCHESTRATOR ---
 EXPOSE 22
-CMD ["/usr/sbin/sshd", "-D"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
